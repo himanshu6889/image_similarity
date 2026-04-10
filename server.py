@@ -1,13 +1,3 @@
-"""
-server.py
----------
-FastAPI localhost server for image similarity search.
-
-Run:
-    python server.py
-Then open http://localhost:8000 in your browser.
-"""
-
 from __future__ import annotations
 
 import base64
@@ -40,7 +30,7 @@ from utils import (
 setup_logging(logging.INFO)
 logger = logging.getLogger("server")
 
-# ─── App ─────────────────────────────────────────────────────────────────────
+# App
 app = FastAPI(title="Image Similarity Search", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
@@ -49,7 +39,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ─── Globals ─────────────────────────────────────────────────────────────────
+# Globals
 DEVICE = get_device()
 CACHE_PATH = Path(".image_embedding_cache.pkl")
 
@@ -67,7 +57,7 @@ index_status: dict = {
     "root": "",
 }
 
-# ─── Startup ─────────────────────────────────────────────────────────────────
+# Startup
 @app.on_event("startup")
 async def startup():
     global embedding_cache
@@ -75,7 +65,7 @@ async def startup():
     logger.info(f"Loaded {len(embedding_cache)} cached embeddings.")
 
 
-# ─── Helpers ─────────────────────────────────────────────────────────────────
+# Helpers
 def _rebuild_index_for_paths(paths: list[str]) -> None:
     """
     Build index_matrix / index_paths from embedding_cache
@@ -151,7 +141,7 @@ def _run_indexing(root: str, batch_size: int = 16) -> None:
         })
 
 
-# ─── Thumbnail ───────────────────────────────────────────────────────────────
+# Thumbnail
 def _make_thumbnail_b64(path: str, size: tuple = (400, 400)) -> str:
     """
     Generate a base64-encoded JPEG thumbnail.
@@ -183,7 +173,7 @@ def _make_thumbnail_b64(path: str, size: tuple = (400, 400)) -> str:
         return ""
 
 
-# ─── API endpoints ────────────────────────────────────────────────────────────
+# API endpoints
 
 @app.post("/api/index")
 async def start_index(root: str = Form(...), batch_size: int = Form(16)):
@@ -309,7 +299,7 @@ async def serve_image(path: str):
     return FileResponse(str(p), media_type=media_type)
 
 
-# ─── Serve single-page UI ────────────────────────────────────────────────────
+# Serve single-page UI
 @app.get("/", response_class=HTMLResponse)
 async def serve_ui():
     ui_path = Path(__file__).parent / "ui.html"
@@ -318,7 +308,7 @@ async def serve_ui():
     return HTMLResponse("<h1>ui.html not found — make sure ui.html is in the same folder.</h1>", status_code=404)
 
 
-# ─── Entry point ─────────────────────────────────────────────────────────────
+# Entry point
 if __name__ == "__main__":
     print("\n" + "═" * 55)
     print("  🔍  Image Similarity Search — localhost server")

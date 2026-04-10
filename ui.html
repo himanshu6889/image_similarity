@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Image Similarity Search</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:       #0a0a0f;
+  --surface:  #12121a;
+  --card:     #1a1a26;
+  --border:   #2a2a3e;
+  --accent:   #6c63ff;
+  --accent2:  #ff6584;
+  --accent3:  #43e97b;
+  --text:     #e8e8f0;
+  --muted:    #6b6b8a;
+  --radius:   14px;
+  --font-head: 'Syne', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Grid noise texture overlay ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(108,99,255,.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 90%, rgba(255,101,132,.08) 0%, transparent 60%);
+}
+
+/* ── Layout ── */
+.shell {
+  position: relative; z-index: 1;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32px 0 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  display: flex; align-items: center; gap: 14px;
+}
+
+.logo-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: grid; place-items: center;
+  font-size: 22px;
+  box-shadow: 0 0 24px rgba(108,99,255,.4);
+}
+
+.logo h1 {
+  font-family: var(--font-head);
+  font-size: 1.4rem; font-weight: 800;
+  letter-spacing: -.5px;
+}
+
+.logo p { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+
+.status-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: .72rem; color: var(--muted);
+}
+
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--muted);
+  transition: background .3s;
+}
+.dot.green  { background: var(--accent3); box-shadow: 0 0 8px var(--accent3); }
+.dot.orange { background: #ffb347;        box-shadow: 0 0 8px #ffb347; }
+.dot.red    { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+
+/* ── Main two-column layout ── */
+.workspace {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 24px;
+  margin-top: 28px;
+}
+
+@media (max-width: 900px) {
+  .workspace { grid-template-columns: 1fr; }
+}
+
+/* ── Panel card ── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+.panel-title {
+  font-family: var(--font-head);
+  font-size: .9rem; font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 18px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* ── Index form ── */
+.field { margin-bottom: 16px; }
+
+label {
+  display: block;
+  font-size: .72rem; color: var(--muted);
+  margin-bottom: 6px; letter-spacing: .5px; text-transform: uppercase;
+}
+
+input[type="text"], input[type="number"] {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: .88rem;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(108,99,255,.18);
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none; cursor: pointer;
+  font-family: var(--font-head);
+  font-size: .88rem; font-weight: 700;
+  transition: opacity .15s, transform .1s, box-shadow .2s;
+}
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), #9c63ff);
+  color: #fff;
+  width: 100%;
+  box-shadow: 0 4px 20px rgba(108,99,255,.35);
+}
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 6px 28px rgba(108,99,255,.55);
+}
+
+.btn-accent2 {
+  background: linear-gradient(135deg, var(--accent2), #ff8da1);
+  color: #fff;
+  width: 100%;
+  box-shadow: 0 4px 20px rgba(255,101,132,.3);
+}
+
+/* ── Progress bar ── */
+.progress-wrap {
+  margin-top: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  height: 8px; overflow: hidden;
+  display: none;
+}
+.progress-wrap.visible { display: block; }
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 999px;
+  width: 0%;
+  transition: width .4s ease;
+}
+
+.progress-text {
+  font-size: .7rem; color: var(--muted);
+  margin-top: 6px; min-height: 1.2em;
+}
+
+/* ── Drop zone ── */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 36px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  position: relative;
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+  border-color: var(--accent);
+  background: rgba(108,99,255,.06);
+}
+
+.drop-zone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+
+.drop-icon { font-size: 2.4rem; margin-bottom: 10px; }
+.drop-zone p { font-size: .82rem; color: var(--muted); line-height: 1.6; }
+.drop-zone strong { color: var(--text); }
+
+.query-preview {
+  margin-top: 14px; border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--border);
+  display: none;
+}
+.query-preview img { width: 100%; display: block; max-height: 240px; object-fit: cover; }
+
+/* ── Search controls ── */
+.inline-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;
+}
+
+/* ── Results panel ── */
+.results-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.results-count {
+  font-family: var(--font-head);
+  font-size: 1.5rem; font-weight: 800;
+}
+
+.results-count span { color: var(--accent); }
+
+/* ── Result grid ── */
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+/* ── Result card ── */
+.result-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform .18s, border-color .18s, box-shadow .18s;
+  animation: fadeUp .35s ease both;
+}
+
+.result-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  box-shadow: 0 8px 28px rgba(108,99,255,.28);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.result-img-wrap {
+  position: relative; aspect-ratio: 1; overflow: hidden;
+  background: var(--surface);
+}
+.result-img-wrap img {
+  width: 100%; height: 100%; object-fit: cover;
+  display: block;
+  transition: transform .3s;
+}
+.result-card:hover .result-img-wrap img { transform: scale(1.06); }
+
+.score-badge {
+  position: absolute; top: 8px; right: 8px;
+  background: rgba(10,10,15,.82);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: .7rem; font-weight: 500;
+  color: var(--accent3);
+}
+
+.rank-badge {
+  position: absolute; top: 8px; left: 8px;
+  background: linear-gradient(135deg, var(--accent), #9c63ff);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: .68rem; font-weight: 700; color: #fff;
+}
+
+.result-info {
+  padding: 10px 12px;
+}
+
+.result-name {
+  font-size: .75rem; font-weight: 500;
+  color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.result-path {
+  font-size: .65rem; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Score bar inside card */
+.score-bar-wrap {
+  height: 3px; background: var(--border); border-radius: 99px; margin-top: 6px;
+}
+.score-bar-fill {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent3), var(--accent));
+}
+
+/* ── Empty / loading states ── */
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center; padding: 60px 20px;
+  color: var(--muted);
+}
+.empty-state .big-icon { font-size: 3rem; margin-bottom: 12px; opacity: .4; }
+.empty-state p { font-size: .85rem; line-height: 1.8; }
+
+/* ── Spinner ── */
+.spinner {
+  display: inline-block;
+  width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,.15);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Lightbox ── */
+.lightbox {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(10,10,15,.92);
+  backdrop-filter: blur(12px);
+  display: none; place-items: center;
+}
+.lightbox.open { display: grid; }
+
+.lightbox-inner {
+  max-width: 90vw; max-height: 90vh;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  animation: popIn .22s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.lightbox-inner img {
+  max-width: 88vw; max-height: 75vh; display: block; object-fit: contain;
+}
+
+.lightbox-footer {
+  padding: 14px 18px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+
+.lightbox-path { font-size: .72rem; color: var(--muted); word-break: break-all; }
+.lightbox-close {
+  background: var(--border); border: none; color: var(--text);
+  border-radius: 8px; padding: 7px 14px;
+  cursor: pointer; font-family: var(--font-mono); font-size: .8rem;
+  transition: background .15s;
+}
+.lightbox-close:hover { background: var(--accent); }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 999px; padding: 10px 22px;
+  font-size: .8rem; color: var(--text);
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+  z-index: 200; opacity: 0; pointer-events: none;
+  transition: opacity .25s, transform .25s;
+}
+.toast.show {
+  opacity: 1; pointer-events: auto;
+  transform: translateX(-50%) translateY(-6px);
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🔍</div>
+      <div>
+        <h1>ImageSearch</h1>
+        <p>Multi-modal local similarity engine</p>
+      </div>
+    </div>
+    <div class="status-pill">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">Idle</span>
+    </div>
+  </header>
+
+  <!-- ── Workspace ── -->
+  <div class="workspace">
+
+    <!-- ── Left panel ── -->
+    <aside>
+
+      <!-- Index section -->
+      <div class="panel" style="margin-bottom:20px">
+        <div class="panel-title">📁 Index Directory</div>
+
+        <div class="field">
+          <label>Root Folder Path</label>
+          <input type="text" id="rootDir" placeholder="D:\IIT\data"
+                 value="D:\IIT\data"/>
+        </div>
+
+        <div class="field">
+          <label>Batch Size <span style="color:var(--muted)">(GPU: 32, CPU: 8)</span></label>
+          <input type="number" id="batchSize" value="16" min="1" max="128"/>
+        </div>
+
+        <button class="btn btn-primary" id="indexBtn" onclick="startIndex()">
+          ⚡ Build Index
+        </button>
+
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <p class="progress-text" id="progressText"></p>
+      </div>
+
+      <!-- Search section -->
+      <div class="panel">
+        <div class="panel-title">🔎 Search</div>
+
+        <div class="drop-zone" id="dropZone"
+             ondragover="handleDragOver(event)"
+             ondragleave="handleDragLeave(event)"
+             ondrop="handleDrop(event)">
+          <input type="file" id="queryFile" accept="image/*"
+                 onchange="handleFileSelect(event)"/>
+          <div class="drop-icon">🖼️</div>
+          <p><strong>Drop a query image here</strong><br/>or click to browse</p>
+        </div>
+
+        <div class="query-preview" id="queryPreview">
+          <img id="queryImg" src="" alt="Query"/>
+        </div>
+
+        <div class="inline-row" style="margin-top:16px">
+          <div class="field">
+            <label>Top K</label>
+            <input type="number" id="topK" value="10" min="1" max="100"/>
+          </div>
+          <div class="field">
+            <label>Min Score</label>
+            <input type="number" id="threshold" value="0.0" min="0" max="1" step="0.05"/>
+          </div>
+        </div>
+
+        <button class="btn btn-accent2" id="searchBtn"
+                onclick="runSearch()" disabled>
+          🚀 Find Similar
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- ── Right panel ── -->
+    <main class="panel">
+      <div class="results-header">
+        <div class="results-count" id="resultsCount">
+          <span>0</span> results
+        </div>
+        <div style="font-size:.72rem;color:var(--muted)" id="resultsTime"></div>
+      </div>
+
+      <div class="results-grid" id="resultsGrid">
+        <div class="empty-state">
+          <div class="big-icon">🧭</div>
+          <p>Build an index first, then<br/>drop a query image to search.</p>
+        </div>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<!-- ── Lightbox ── -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <div class="lightbox-inner">
+    <img id="lightboxImg" src="" alt=""/>
+    <div class="lightbox-footer">
+      <span class="lightbox-path" id="lightboxPath"></span>
+      <button class="lightbox-close" onclick="closeLightbox()">✕ Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── State ── */
+let queryFile = null;
+let pollTimer = null;
+
+/* ── Toast ── */
+function showToast(msg, ms = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+/* ── Status dot ── */
+function setStatus(state, text) {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  dot.className = 'dot ' + (state || '');
+  txt.textContent = text;
+}
+
+/* ── Index ── */
+async function startIndex() {
+  const root = document.getElementById('rootDir').value.trim();
+  const batch = parseInt(document.getElementById('batchSize').value) || 16;
+  if (!root) { showToast('⚠️ Please enter a root folder path.'); return; }
+
+  const btn = document.getElementById('indexBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Starting …';
+  setStatus('orange', 'Indexing …');
+
+  document.getElementById('progressWrap').classList.add('visible');
+
+  const fd = new FormData();
+  fd.append('root', root);
+  fd.append('batch_size', batch);
+
+  const r = await fetch('/api/index', { method: 'POST', body: fd });
+  const d = await r.json();
+
+  if (d.status === 'already_running') {
+    showToast('⏳ Indexing already in progress.');
+  }
+
+  // Start polling
+  clearInterval(pollTimer);
+  pollTimer = setInterval(pollIndexStatus, 1500);
+}
+
+async function pollIndexStatus() {
+  const r = await fetch('/api/index/status');
+  const d = await r.json();
+
+  const pct = d.total > 0 ? Math.round((d.done / d.total) * 100) : 0;
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressText').textContent = d.message;
+
+  if (!d.running) {
+    clearInterval(pollTimer);
+    const btn = document.getElementById('indexBtn');
+    btn.disabled = false;
+    btn.innerHTML = '⚡ Re-index';
+
+    if (d.error) {
+      setStatus('red', 'Error');
+      showToast('❌ ' + d.error, 5000);
+    } else {
+      setStatus('green', 'Index ready');
+      showToast('✅ Index built! Drop a query image to search.');
+      document.getElementById('searchBtn').disabled = (queryFile === null);
+    }
+  }
+}
+
+/* ── File handling ── */
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.add('dragover');
+}
+function handleDragLeave() {
+  document.getElementById('dropZone').classList.remove('dragover');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('dragover');
+  const files = e.dataTransfer.files;
+  if (files.length) loadQueryFile(files[0]);
+}
+function handleFileSelect(e) {
+  if (e.target.files.length) loadQueryFile(e.target.files[0]);
+}
+
+function loadQueryFile(file) {
+  queryFile = file;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const preview = document.getElementById('queryPreview');
+    document.getElementById('queryImg').src = ev.target.result;
+    preview.style.display = 'block';
+    document.getElementById('searchBtn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ── Search ── */
+async function runSearch() {
+  if (!queryFile) { showToast('⚠️ No query image selected.'); return; }
+
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Searching …';
+  setStatus('orange', 'Searching …');
+
+  const t0 = performance.now();
+
+  const fd = new FormData();
+  fd.append('file', queryFile);
+  fd.append('topk', document.getElementById('topK').value);
+  fd.append('threshold', document.getElementById('threshold').value);
+
+  try {
+    const r = await fetch('/api/search', { method: 'POST', body: fd });
+    if (!r.ok) {
+      const err = await r.json();
+      showToast('❌ ' + (err.detail || 'Search failed'), 5000);
+      return;
+    }
+    const data = await r.json();
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+
+    renderResults(data.results, elapsed);
+    setStatus('green', 'Done');
+    showToast(`✅ Found ${data.results.length} result(s) in ${elapsed}s`);
+
+  } catch (err) {
+    showToast('❌ Network error: ' + err.message, 5000);
+    setStatus('red', 'Error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🚀 Find Similar';
+  }
+}
+
+/* ── Safe API image URL: converts Windows backslashes before encoding ── */
+function apiImageUrl(path) {
+  return '/api/image?path=' + encodeURIComponent(path.replace(/\\/g, '/'));
+}
+
+/* ── Render results ── */
+function renderResults(results, elapsed) {
+  document.getElementById('resultsCount').innerHTML =
+    `<span>${results.length}</span> result${results.length !== 1 ? 's' : ''}`;
+  document.getElementById('resultsTime').textContent =
+    elapsed ? `⏱ ${elapsed}s` : '';
+
+  const grid = document.getElementById('resultsGrid');
+  grid.innerHTML = '';
+
+  if (!results.length) {
+    grid.innerHTML = `<div class="empty-state">
+      <div class="big-icon">🔭</div>
+      <p>No images matched your query.<br/>Try lowering the Min Score threshold.</p>
+    </div>`;
+    return;
+  }
+
+  results.forEach((r, i) => {
+    const name       = r.path.split(/[\/\\]/).pop();
+    const dir        = r.path.replace(/[\/\\][^\/\\]+$/, '');
+    const pct        = Math.round(r.similarity * 100);
+    const delay      = (i * 40) + 'ms';
+    const fallbackSrc = apiImageUrl(r.path);
+    const imgSrc     = r.thumbnail || fallbackSrc;
+
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    card.style.animationDelay = delay;
+    card.onclick = () => openLightbox(r.path);
+
+    card.innerHTML = `
+      <div class="result-img-wrap">
+        <img src="${imgSrc}" alt="${name}" loading="lazy"/>
+        <div class="rank-badge">#${i + 1}</div>
+        <div class="score-badge">${pct}%</div>
+      </div>
+      <div class="result-info">
+        <div class="result-name" title="${name}">${name}</div>
+        <div class="result-path" title="${r.path}">${dir}</div>
+        <div class="score-bar-wrap">
+          <div class="score-bar-fill" style="width:${pct}%"></div>
+        </div>
+      </div>`;
+
+    /* If b64 thumbnail failed, retry via /api/image; if that also fails show placeholder */
+    const imgEl = card.querySelector('img');
+    imgEl.onerror = function () {
+      this.onerror = null;
+      if (this.src !== fallbackSrc) {
+        this.src = fallbackSrc;
+      } else {
+        this.parentElement.innerHTML = `
+          <div class="rank-badge">#${i + 1}</div>
+          <div class="score-badge">${pct}%</div>
+          <div style="display:flex;flex-direction:column;align-items:center;
+                      justify-content:center;height:100%;color:var(--muted);
+                      font-size:.72rem;gap:8px;padding:10px;text-align:center;">
+            <span style="font-size:2rem;opacity:.3">🖼️</span>
+            <span>Preview unavailable</span>
+          </div>`;
+      }
+    };
+
+    grid.appendChild(card);
+  });
+}
+/* ── Lightbox ── */
+function openLightbox(path) {
+  document.getElementById('lightboxImg').src = apiImageUrl(path);
+  document.getElementById('lightboxPath').textContent = path;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox(e) {
+  if (!e || e.target === document.getElementById('lightbox') ||
+      e.currentTarget.classList.contains('lightbox-close')) {
+    document.getElementById('lightbox').classList.remove('open');
+  }
+}
+
+/* ── Keyboard ── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+
+// Enter on root dir or batch size → start index
+['rootDir', 'batchSize'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') startIndex();
+  });
+});
+
+// Enter on topK or threshold → run search
+['topK', 'threshold'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') runSearch();
+  });
+});
+
+/* ── Init ── */
+(async () => {
+  const r = await fetch('/api/index/status').catch(() => null);
+  if (r?.ok) {
+    const d = await r.json();
+    if (d.message && d.message.includes('✅')) {
+      setStatus('green', 'Index ready');
+      document.getElementById('progressText').textContent = d.message;
+    }
+  }
+})();
+</script>
+</body>
+</html>

@@ -34,7 +34,8 @@ cd image-similarity
 
 # 2. (Recommended) Create a virtual environment
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+source venv/bin/activate # Mac/Linux
+venv\Scripts\activate # Windows
 
 # 3. Install dependencies
 pip install -r requirements.txt
@@ -59,41 +60,6 @@ Then open **http://localhost:8000** in your browser.
 2. Click **Build Index** — progress is shown live
 3. Upload any query image and click **Search**
 4. Results appear with similarity scores and thumbnails
-
----
-
-### Option B — Command Line
-
-```bash
-python app.py --query path/to/query.jpg --root path/to/images/
-```
-
-**Common options:**
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--query` | *(required)* | Path to the query image |
-| `--root` | *(required)* | Folder to search in |
-| `--topk` | `10` | Number of results to return |
-| `--threshold` | `0.0` | Minimum similarity score (0–1) |
-| `--cache` | `.image_embedding_cache.pkl` | Custom cache file path |
-| `--reindex` | off | Force re-embed all images (ignore cache) |
-| `--output` | stdout | Write JSON results to a file |
-| `--no-recursive` | off | Don't search sub-folders |
-| `--verbose` / `-v` | off | Enable debug logging |
-
-**Examples:**
-
-```bash
-# Basic search, top 10 results
-python app.py --query ./my_photo.jpg --root ./photos/
-
-# Only return results above 75% similarity
-python app.py --query ./my_photo.jpg --root ./photos/ --threshold 0.75
-
-# Force full re-index and save results to a file
-python app.py --query ./my_photo.jpg --root ./photos/ --reindex --output results.json
-```
 
 ---
 

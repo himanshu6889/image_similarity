@@ -47,7 +47,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Option A — Web UI (recommended)
+### Web UI (recommended)
 
 ```bash
 python server.py
@@ -90,9 +90,3 @@ image_similarity/
 4. **Search** — the query image is embedded the same way, then compared to the index using cosine similarity
 
 ---
-
-## Notes
-
-- The cache file (`.image_embedding_cache.pkl`) is excluded from git. It will be created automatically on first run.
-- No `.env` or API keys are needed — everything runs locally.
-- Supported image formats: JPG, PNG, BMP, GIF, TIFF, WEBP, HEIC, JFIF

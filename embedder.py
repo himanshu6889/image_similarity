@@ -21,6 +21,21 @@ import numpy as np
 import torch
 from PIL import Image
 
+try:
+    import spaces  # Hugging Face ZeroGPU
+except ImportError:
+    class _NoOpSpaces:
+        @staticmethod
+        def GPU(func=None, **kwargs):
+            # No-op decorator when not running on HF Spaces (e.g. local/dev)
+            if func is not None:
+                return func
+            def wrapper(f):
+                return f
+            return wrapper
+
+    spaces = _NoOpSpaces()
+
 logger = logging.getLogger(__name__)
 
 
@@ -243,6 +258,7 @@ TXT_WEIGHT = 0.6
 TEXT_RATIO_THRESHOLD = 0.08   # run OCR if heuristic score exceeds this
 
 
+@spaces.GPU
 def embed_single(
     image_path: str | Path,
     device: str = "cpu",
@@ -253,6 +269,10 @@ def embed_single(
 
     Returns a 1-D float32 numpy array (L2-normalised).
     """
+    # Re-detect device at call time — on ZeroGPU, CUDA is only attached
+    # inside a @spaces.GPU call, so a device cached at import time is stale.
+    device = "cuda" if torch.cuda.is_available() else device
+
     path = Path(image_path)
     pil_img = Image.open(path)
     pil_img = preprocess_image(pil_img)
@@ -284,6 +304,7 @@ def embed_single(
     return (fused / norm).astype(np.float32)
 
 
+@spaces.GPU
 def embed_batch(
     image_paths: list[str | Path],
     device: str = "cpu",
@@ -293,6 +314,9 @@ def embed_batch(
     Compute embeddings for a list of image paths in batches.
     Returns dict mapping str(path) → embedding vector.
     """
+    # Re-detect device at call time — see note in embed_single.
+    device = "cuda" if torch.cuda.is_available() else device
+
     from tqdm import tqdm
 
     results: dict[str, np.ndarray] = {}

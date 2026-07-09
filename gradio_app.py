@@ -147,5 +147,8 @@ with gr.Blocks(title="Image Similarity Search") as demo:
     )
 
 
+demo.queue()
+
 if __name__ == "__main__":
     demo.launch()
+    

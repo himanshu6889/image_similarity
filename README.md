@@ -3,11 +3,11 @@ title: Image Similarity Search
 emoji: 🔍
 colorFrom: indigo
 colorTo: pink
-sdk: docker
-app_port: 7860
+sdk: gradio
+sdk_version: 4.36.0
+app_file: gradio_app.py
 pinned: false
 ---
-
 # 🔍 Image Similarity Search
 
 A local, **privacy-first** image similarity search tool. Point it at a folder of images, upload a query image, and it finds the most visually similar matches — no cloud, no API keys needed.
@@ -66,6 +66,7 @@ python server.py
 Then open **http://localhost:8000** in your browser.
 
 **Steps in the UI:**
+
 1. Enter the path to your images folder (e.g. `D:\Photos` or `/home/user/pics`)
 2. Click **Build Index** — progress is shown live
 3. Upload any query image and click **Search**

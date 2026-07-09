@@ -29,7 +29,7 @@ Uses **CLIP ViT-L/14** for visual embeddings, **BGE-M3** for text (via OCR on im
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/YOUR_USERNAME/image-similarity.git
+git clone https://github.com/himanshu6889/image-similarity.git
 cd image-similarity
 
 # 2. (Recommended) Create a virtual environment

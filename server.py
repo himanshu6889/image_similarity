@@ -175,6 +175,45 @@ def _make_thumbnail_b64(path: str, size: tuple = (400, 400)) -> str:
 
 # API endpoints
 
+@app.post("/api/index_upload")
+async def start_index_upload(
+    files: list[UploadFile] = File(...),
+    batch_size: int = Form(16),
+):
+    """
+    Build an index from uploaded files instead of a local folder path.
+    Needed for public/cloud deployments where the server has no access
+    to the visitor's filesystem.
+    """
+    global index_matrix, index_paths, current_root
+
+    if index_status["running"]:
+        return JSONResponse({"status": "already_running"})
+
+    upload_dir = Path(tempfile.mkdtemp(prefix="uploaded_index_"))
+    saved_paths: list[str] = []
+    for f in files:
+        dest = upload_dir / Path(f.filename or "image").name
+        with open(dest, "wb") as out:
+            out.write(await f.read())
+        saved_paths.append(str(dest))
+
+    resolved = str(upload_dir)
+    if resolved != current_root:
+        index_matrix = None
+        index_paths = []
+        current_root = ""
+
+    thread = threading.Thread(
+        target=_run_indexing,
+        args=(resolved,),
+        kwargs={"batch_size": batch_size},
+        daemon=True,
+    )
+    thread.start()
+    return JSONResponse({"status": "started", "root": resolved, "count": len(saved_paths)})
+
+
 @app.post("/api/index")
 async def start_index(root: str = Form(...), batch_size: int = Form(16)):
     """Start background indexing. Clears current index immediately on root change."""
@@ -310,9 +349,8 @@ async def serve_ui():
 
 # Entry point
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 7860))
     print("\n" + "═" * 55)
-    print("  🔍  Image Similarity Search — localhost server")
-    print("  Open http://localhost:8000 in your browser")
-    print("  Press Ctrl+C to stop")
+    print(f"  🔍  Image Similarity Search — running on port {port}")
     print("═" * 55 + "\n")
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("server:app", host="0.0.0.0", port=port, reload=False)

@@ -1,3 +1,13 @@
+---
+title: Image Similarity Search
+emoji: 🔍
+colorFrom: indigo
+colorTo: pink
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 🔍 Image Similarity Search
 
 A local, **privacy-first** image similarity search tool. Point it at a folder of images, upload a query image, and it finds the most visually similar matches — no cloud, no API keys needed.
@@ -29,7 +39,7 @@ Uses **CLIP ViT-L/14** for visual embeddings, **BGE-M3** for text (via OCR on im
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/YOUR_USERNAME/image-similarity.git
+git clone https://github.com/himanshu6889/image-similarity.git
 cd image-similarity
 
 # 2. (Recommended) Create a virtual environment
@@ -47,7 +57,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Option A — Web UI (recommended)
+### Web UI (recommended)
 
 ```bash
 python server.py
@@ -90,15 +100,3 @@ image_similarity/
 4. **Search** — the query image is embedded the same way, then compared to the index using cosine similarity
 
 ---
-
-## Notes
-
-- The cache file (`.image_embedding_cache.pkl`) is excluded from git. It will be created automatically on first run.
-- No `.env` or API keys are needed — everything runs locally.
-- Supported image formats: JPG, PNG, BMP, GIF, TIFF, WEBP, HEIC, JFIF
-
----
-
-## License
-
-MIT

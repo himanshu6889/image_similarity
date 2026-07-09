@@ -450,9 +450,8 @@ input[type="number"]:focus {
         <div class="panel-title">📁 Index Directory</div>
 
         <div class="field">
-          <label>Root Folder Path</label>
-          <input type="text" id="rootDir" placeholder="D:\IIT\data"
-                 value="D:\IIT\data"/>
+          <label>Upload a Folder of Images</label>
+          <input type="file" id="rootDirFiles" webkitdirectory directory multiple/>
         </div>
 
         <div class="field">
@@ -564,22 +563,27 @@ function setStatus(state, text) {
 
 /* ── Index ── */
 async function startIndex() {
-  const root = document.getElementById('rootDir').value.trim();
+  const fileInput = document.getElementById('rootDirFiles');
   const batch = parseInt(document.getElementById('batchSize').value) || 16;
-  if (!root) { showToast('⚠️ Please enter a root folder path.'); return; }
+  if (!fileInput.files || fileInput.files.length === 0) {
+    showToast('⚠️ Please choose a folder of images first.');
+    return;
+  }
 
   const btn = document.getElementById('indexBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Starting …';
-  setStatus('orange', 'Indexing …');
+  btn.innerHTML = '<span class="spinner"></span> Uploading …';
+  setStatus('orange', 'Uploading …');
 
   document.getElementById('progressWrap').classList.add('visible');
 
   const fd = new FormData();
-  fd.append('root', root);
+  for (const f of fileInput.files) {
+    if (f.type.startsWith('image/')) fd.append('files', f, f.name);
+  }
   fd.append('batch_size', batch);
 
-  const r = await fetch('/api/index', { method: 'POST', body: fd });
+  const r = await fetch('/api/index_upload', { method: 'POST', body: fd });
   const d = await r.json();
 
   if (d.status === 'already_running') {

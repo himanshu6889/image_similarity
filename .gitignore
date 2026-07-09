@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+.image_embedding_cache.pkl
+*.pkl
+venv/
+.venv/
+.env
